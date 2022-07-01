@@ -25,14 +25,26 @@ async function run() {
         app.get('/billing-list', async (req, res) => {
             const page = parseInt(req.query.page);
             const count = parseInt(req.query.count);
-            const query = {}
+            const search = req.query.search;
             let bills;
             if (page || count) {
-                bills = (await (billsCollection.find(query).sort({ _id: -1 }).skip(page * count).limit(count).toArray()))
+                bills = (await (billsCollection.find({
+                    "$or": [
+                        { name: { $regex: search, $options: '$i' } },
+                        { email: { $regex: search } },
+                        { phone: { $regex: search } }
+                    ]
+                }).sort({ _id: -1 }).skip(page * count).limit(count).toArray()))
             }
             else {
 
-                bills = (await billsCollection.find(query).toArray()).reverse()
+                bills = await billsCollection.find({
+                    "$or": [
+                        { name: { $regex: search, $options: '$i' } },
+                        { email: { $regex: search } },
+                        { phone: { $regex: search } }
+                    ]
+                }).toArray()
             }
             res.send(bills)
         })
@@ -74,27 +86,10 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/search-billing', async (req, res) => {
-            const search = req.query.search;
-
-            const bills = await billsCollection.find({
-                "$or": [
-                    { name: { $regex: search, $options: '$i' } },
-                    { email: { $regex: search } },
-                    { phone: { $regex: search } }
-                ]
-            }).toArray();
-
-            res.send(bills)
-
-        })
-
         app.get('/totalbillcount', async (req, res) => {
             const count = await billsCollection.estimatedDocumentCount();
             res.send({ count })
         })
-
-        console.log('db connected')
     } finally { }
 }
 run()
